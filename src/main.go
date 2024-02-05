@@ -1,7 +1,10 @@
 package main
 
-import "fmt"
+import (
+	"basic-api-docker/infra/handler"
+)
 
 func main() {
-	fmt.Println("Hello World!")
+	router := handler.NewRouter()
+	router.Logger.Fatal(router.Start(":8080"))
 }
