@@ -1,23 +1,24 @@
 package mysql
 
 import (
-	"database/sql"
+	"fmt"
 	"os"
+
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 )
 
-type DBConnection struct {
-	Conn *sql.DB
+type Connection struct {
+	*gorm.DB
 }
 
-func NewDBConnection() (*DBConnection, error) {
-	dbUser := os.Getenv("DB_USER")
-	dbPass := os.Getenv("DB_PW")
-	dbName := os.Getenv("DB_NAME")
-	dbAddr := os.Getenv("DB_ADDR")
-	conn, err := sql.Open("mysql", dbUser+":"+dbPass+"@("+dbAddr+")/"+dbName)
+func NewConnection() (*Connection, error) {
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:3306)/%s?parseTime=true", os.Getenv("DB_USER"), os.Getenv("DB_PASS"), os.Getenv("DB_HOST"), os.Getenv("DB_NAME"))
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
 		return nil, err
 	}
-
-	return &DBConnection{Conn: conn}, nil
+	return &Connection{
+		db,
+	}, nil
 }

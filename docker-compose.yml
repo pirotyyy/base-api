@@ -1,24 +1,52 @@
-version: "3.9"
-
+version: '3.8'
 services:
   api:
     build:
-      context: ./src
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: src/api/Dockerfile
     ports:
-      - "8080:8080"
+      - 8080:8080
     depends_on:
-        - db
-  db:
-    container_name: basic-api-docker-db
-    image: mysql:latest
-    platform: linux/amd64
+      database:
+        condition: service_healthy
+    env_file:
+      - .env
+    tty: true
+
+  database:
+    image: mysql:8.0
+    env_file:
+      - .env
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: basic_db
-      MYSQL_USER: user
-      MYSQL_PASSWORD: password
-    volumes:
-        - ./db/conf.d:/etc/mysql/conf.d
+      MYSQL_ROOT_PASSWORD: ${ROOT_PASS}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASS}
     ports:
-      - "3306:3306"
+      - 3306:3306
+    command: --default-authentication-plugin=mysql_native_password
+    volumes:
+        - ./tools/mysql/my.cnf:/etc/mysql/conf.d/my.cnf
+        - BaseApi:/var/lib/mysql
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${ROOT_PASS}" ]
+      interval: 5s
+      timeout: 10s
+      retries: 6
+      start_period: 5s
+
+  migrate:
+    build:
+      context: ./tools/migrate
+      dockerfile: Dockerfile
+    volumes:
+      - ./tools/migrate/migrations:/app/migrations
+    networks:
+        - default
+    env_file:
+      - .env
+    depends_on:
+      database:
+        condition: service_healthy
+volumes:
+  BaseApi:
